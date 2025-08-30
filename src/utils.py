@@ -25,10 +25,10 @@ from open_deep_research.tools.fmp.tools import (
   get_full_stock_quote,
   get_income_statement,
   get_key_metrics,
+  get_light_chart,
   get_short_stock_quote,
   get_stock_news,
   get_treasury_rates,
-  search_stock_symbols,
 )
 
 ##########################
@@ -259,13 +259,13 @@ async def get_all_tools(config: RunnableConfig) -> List[BaseTool]:
     get_company_profile,
     get_full_stock_quote,
     get_short_stock_quote,
+    get_light_chart,
     get_economic_events,
     get_treasury_rates,
     get_income_statement,
     get_balance_sheet,
     get_cash_flow,
     get_key_metrics,
-    search_stock_symbols,
     get_stock_news,
   ]
 

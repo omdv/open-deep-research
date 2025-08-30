@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class FMPError(Exception):
   """Custom exception for FMP API errors."""
 
-  def __init__(self, status_code: int, message: str = ""):
+  def __init__(self, status_code: int, message: str = "") -> None:
     self.status_code = status_code
     self.message = message
     super().__init__(f"FMP API error {status_code}: {message}")
@@ -23,7 +23,7 @@ class FMPError(Exception):
 class FMPClient:
   """Financial Modeling Prep API client."""
 
-  def __init__(self, api_key: Optional[str] = None):
+  def __init__(self, api_key: Optional[str] = None) -> None:
     """Initialize the FMP client."""
     self.api_key = api_key or os.getenv("FMP_API_KEY")
     if not self.api_key:
@@ -31,16 +31,19 @@ class FMPClient:
         "FMP_API_KEY must be provided or set as environment variable",
       )
 
-    self.base_url = "https://financialmodelingprep.com/api/v3"
+    self.stable_url = "https://financialmodelingprep.com/stable"
+    self.v3_url = "https://financialmodelingprep.com/api/v3"
     self.timeout = 30
 
   async def _make_request(
     self,
     endpoint: str,
     params: Optional[Dict[str, Any]] = None,
+    use_stable: bool = False,
   ) -> Any:
     """Make an HTTP request to the FMP API."""
-    url = f"{self.base_url}/{endpoint.lstrip('/')}"
+    base_url = self.stable_url if use_stable else self.v3_url
+    url = f"{base_url}/{endpoint.lstrip('/')}"
     request_params = {"apikey": self.api_key}
     if params:
       request_params.update(params)
@@ -74,19 +77,52 @@ class FMPClient:
   # Company Profile and Information
   async def get_company_profile(self, symbol: str) -> Dict[str, Any]:
     """Get company profile information."""
-    data = await self._make_request(f"profile/{symbol}")
+    params = {"symbol": symbol}
+    data = await self._make_request("profile", params, use_stable=True)
     return data[0] if isinstance(data, list) and data else data
 
   # Stock Quotes
   async def get_full_quote(self, symbol: str) -> Dict[str, Any]:
     """Get full stock quote with detailed information."""
-    data = await self._make_request(f"quote/{symbol}")
+    params = {"symbol": symbol}
+    data = await self._make_request("quote", params, use_stable=True)
     return data[0] if isinstance(data, list) and data else data
 
   async def get_short_quote(self, symbol: str) -> Dict[str, Any]:
-    """Get short stock quote with basic price and volume."""
-    data = await self._make_request(f"quote-short/{symbol}")
+    """Get short quote with basic price and volume using stable endpoint.
+    
+    Use ^ prefix for major indices: ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX
+    """
+    params = {"symbol": symbol}
+    data = await self._make_request("quote-short", params, use_stable=True)
     return data[0] if isinstance(data, list) and data else data
+
+
+  async def get_light_chart(
+    self,
+    symbol: str,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+  ) -> List[Dict[str, Any]]:
+    """Get historical price data (light chart) using stable endpoint for stocks and indices.
+
+    Args:
+        symbol: Stock or index symbol (e.g., AAPL, SPY, QQQ, ^GSPC, ^VIX, ^SPX)
+                Use ^ prefix for major indices: ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX
+        from_date: Start date in YYYY-MM-DD format (optional)
+        to_date: End date in YYYY-MM-DD format (optional)
+
+    Returns:
+        List of historical price data
+    """
+    params = {"symbol": symbol}
+    if from_date:
+      params["from"] = from_date
+    if to_date:
+      params["to"] = to_date
+
+    data = await self._make_request("historical-price-eod/light", params, use_stable=True)
+    return data if isinstance(data, list) else [data] if data else []
 
   # Economic Data
   async def get_economic_events(
@@ -108,7 +144,7 @@ class FMPClient:
       )
 
     params = {"from": from_date, "to": to_date}
-    data = await self._make_request("economic_calendar", params)
+    data = await self._make_request("economic_calendar", params, use_stable=False)
 
     # Filter by impact and countries if provided
     if impact or countries:
@@ -129,24 +165,8 @@ class FMPClient:
     to_date = datetime.now().strftime("%Y-%m-%d")
     from_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
-    # Use the stable endpoint for treasury rates
-    url = "https://financialmodelingprep.com/stable/treasury-rates"
-    params = {"from": from_date, "to": to_date, "apikey": self.api_key}
-
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    connector = aiohttp.TCPConnector(ssl=ssl_context)
-
-    async with aiohttp.ClientSession(connector=connector) as session:
-      async with session.get(
-        url,
-        params=params,
-        timeout=self.timeout,
-      ) as response:
-        if response.status not in [200, 201]:
-          raise FMPError(response.status, await response.text())
-        return await response.json()
+    params = {"from": from_date, "to": to_date}
+    return await self._make_request("treasury-rates", params, use_stable=True)
 
   # Financial Statements
   async def get_income_statement(
@@ -156,8 +176,8 @@ class FMPClient:
     limit: int = 5,
   ) -> List[Dict[str, Any]]:
     """Get income statement data."""
-    params = {"period": period, "limit": str(limit)}
-    return await self._make_request(f"income-statement/{symbol}", params)
+    params = {"symbol": symbol, "period": period, "limit": str(limit)}
+    return await self._make_request("income-statement", params, use_stable=True)
 
   async def get_balance_sheet(
     self,
@@ -166,8 +186,8 @@ class FMPClient:
     limit: int = 5,
   ) -> List[Dict[str, Any]]:
     """Get balance sheet data."""
-    params = {"period": period, "limit": str(limit)}
-    return await self._make_request(f"balance-sheet-statement/{symbol}", params)
+    params = {"symbol": symbol, "period": period, "limit": str(limit)}
+    return await self._make_request("balance-sheet-statement", params, use_stable=True)
 
   async def get_cash_flow(
     self,
@@ -176,8 +196,8 @@ class FMPClient:
     limit: int = 5,
   ) -> List[Dict[str, Any]]:
     """Get cash flow statement data."""
-    params = {"period": period, "limit": str(limit)}
-    return await self._make_request(f"cash-flow-statement/{symbol}", params)
+    params = {"symbol": symbol, "period": period, "limit": str(limit)}
+    return await self._make_request("cash-flow-statement", params, use_stable=True)
 
   # Key Metrics
   async def get_key_metrics(
@@ -187,8 +207,8 @@ class FMPClient:
     limit: int = 5,
   ) -> List[Dict[str, Any]]:
     """Get key financial metrics."""
-    params = {"period": period, "limit": str(limit)}
-    return await self._make_request(f"key-metrics/{symbol}", params)
+    params = {"symbol": symbol, "period": period, "limit": str(limit)}
+    return await self._make_request("key-metrics", params, use_stable=True)
 
   async def get_financial_ratios(
     self,
@@ -197,8 +217,8 @@ class FMPClient:
     limit: int = 5,
   ) -> List[Dict[str, Any]]:
     """Get financial ratios."""
-    params = {"period": period, "limit": str(limit)}
-    return await self._make_request(f"ratios/{symbol}", params)
+    params = {"symbol": symbol, "period": period, "limit": str(limit)}
+    return await self._make_request("ratios", params, use_stable=True)
 
   # Market Data
   async def get_historical_price(
@@ -214,7 +234,8 @@ class FMPClient:
     if to_date:
       params["to"] = to_date
 
-    return await self._make_request(f"historical-price-full/{symbol}", params)
+    params["symbol"] = symbol
+    return await self._make_request("historical-price-full", params, use_stable=True)
 
   # Analyst Estimates
   async def get_analyst_estimates(
@@ -224,8 +245,8 @@ class FMPClient:
     limit: int = 5,
   ) -> List[Dict[str, Any]]:
     """Get analyst estimates."""
-    params = {"period": period, "limit": str(limit)}
-    return await self._make_request(f"analyst-estimates/{symbol}", params)
+    params = {"symbol": symbol, "period": period, "limit": str(limit)}
+    return await self._make_request("analyst-estimates", params, use_stable=True)
 
   # News and Events
   async def get_stock_news(
@@ -236,16 +257,16 @@ class FMPClient:
     """Get stock news."""
     params = {"limit": str(limit)}
     if symbols:
-      params["tickers"] = ",".join(symbols)
+      params["symbols"] = ",".join(symbols)
 
-    return await self._make_request("stock_news", params)
+    return await self._make_request("news/stock", params, use_stable=True)
 
   # Symbol Search
   async def search_symbols(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Search for stock symbols."""
     params = {"query": query, "limit": str(limit)}
-    return await self._make_request("search", params)
+    return await self._make_request("search-symbol", params, use_stable=True)
 
   async def get_symbol_list(self) -> List[Dict[str, Any]]:
     """Get list of all available symbols."""
-    return await self._make_request("stock/list")
+    return await self._make_request("stock/list", {}, use_stable=True)

@@ -129,17 +129,17 @@ async def get_full_stock_quote(symbol: str, config: RunnableConfig = None) -> st
 
 
 @tool(
-  description="Get basic stock quote with current price and volume - useful for quick price checks",
+  description="Get basic quote with current price and volume for stocks and indices - useful for quick price checks. Use ^ prefix for major indices (^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)",
 )
 async def get_short_stock_quote(symbol: str, config: RunnableConfig = None) -> str:
-  """Get short stock quote with basic price and volume information.
+  """Get short quote with basic price and volume information for stocks and indices.
 
   Args:
-      symbol: Stock symbol (e.g., AAPL, GOOGL, MSFT)
+      symbol: Stock or index symbol (e.g., AAPL, GOOGL, MSFT, SPY, ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)
       config: Runtime configuration (unused but kept for consistency)
 
   Returns:
-      JSON string with basic stock quote data
+      JSON string with basic quote data
   """
   print(f"📊 FMP TOOL CALLED: get_short_stock_quote for {symbol}")
   logger.info(f"Getting short quote for {symbol}")
@@ -151,14 +151,65 @@ async def get_short_stock_quote(symbol: str, config: RunnableConfig = None) -> s
     return _format_fmp_response(
       data=quote,
       symbol=symbol,
-      endpoint_name="Short Stock Quote",
-      api_endpoint=f"/quote-short/{symbol}",
+      endpoint_name="Short Quote",
+      api_endpoint=f"/stable/quote-short?symbol={symbol}",
     )
 
   except FMPError:
     return f"Error getting short quote for {symbol}"
   except Exception:
     return f"Error getting short quote for {symbol}"
+
+
+
+@tool(
+  description="Get historical end-of-day price data for stocks and indices - useful for daily price analysis and long-term chart patterns. Use ^ prefix for major indices (^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)",
+)
+async def get_light_chart(
+  symbol: str,
+  from_date: Optional[str] = None,
+  to_date: Optional[str] = None,
+  config: RunnableConfig = None,
+) -> str:
+  """Get historical price data (light chart) with end-of-day data for stocks and indices.
+
+  Args:
+      symbol: Stock or index symbol (e.g., AAPL, SPY, QQQ, DIA, IWM, VTI, ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)
+      from_date: Start date in YYYY-MM-DD format (optional)
+      to_date: End date in YYYY-MM-DD format (optional)
+      config: Runtime configuration (unused but kept for consistency)
+
+  Returns:
+      JSON string with historical price data
+  """
+  print(f"📊 FMP TOOL CALLED: get_light_chart for {symbol}")
+  logger.info(f"Getting light chart for {symbol}")
+
+  try:
+    client = _get_fmp_client()
+    chart_data = await client.get_light_chart(symbol, from_date, to_date)
+
+    # Build endpoint URL with parameters for the stable endpoint
+    endpoint = f"/stable/historical-price-eod/light?symbol={symbol}"
+    if from_date or to_date:
+      params = []
+      if from_date:
+        params.append(f"from={from_date}")
+      if to_date:
+        params.append(f"to={to_date}")
+      endpoint += f"&{'&'.join(params)}"
+
+    return _format_fmp_response(
+      data=chart_data,
+      symbol=symbol,
+      endpoint_name="Light Chart (EOD)",
+      api_endpoint=endpoint,
+    )
+
+  except FMPError:
+    return f"Error getting light chart for {symbol}"
+  except Exception:
+    return f"Error getting light chart for {symbol}"
 
 
 # Economic Data Tools
@@ -202,7 +253,7 @@ async def get_economic_events(
       data=events,
       symbol="",
       endpoint_name="Economic Calendar Events",
-      api_endpoint=f"/economic_calendar?from={from_date}&to={to_date}",
+      api_endpoint=f"/api/v3/economic_calendar?from={from_date}&to={to_date}",
     )
 
   except FMPError:
@@ -441,7 +492,7 @@ async def search_stock_symbols(
       data=results,
       symbol="",
       endpoint_name="Symbol Search",
-      api_endpoint=f"/search?query={query}&limit={limit}",
+      api_endpoint=f"/stable/search-symbol?query={query}&limit={limit}",
     )
 
   except FMPError:
@@ -481,9 +532,9 @@ async def get_stock_news(
       data=news,
       symbol=symbols_param,
       endpoint_name="Stock News",
-      api_endpoint=f"/stock_news?tickers={symbols_param}&limit={limit}"
+      api_endpoint=f"/stable/news/stock?symbols={symbols_param}&limit={limit}"
       if symbols
-      else f"/stock_news?limit={limit}",
+      else f"/stable/news/stock?limit={limit}",
     )
 
   except FMPError:
