@@ -49,18 +49,18 @@ def _get_fmp_client() -> FMPClient:
   """Get FMP client instance."""
   try:
     return FMPClient()
-  except ValueError as e:
-    logger.error(f"Failed to initialize FMP client: {e}")
+  except ValueError:
+    logger.exception("Failed to initialize FMP client")
     raise
 
 
 # Company Information Tools
-
-
 @tool(
   description="Get comprehensive company profile information including CEO, market cap, industry, sector, and business description",
 )
-async def get_company_profile(symbol: str, config: RunnableConfig = None) -> str:
+async def get_company_profile(
+  symbol: str, _: RunnableConfig = None,
+) -> str:
   """Get comprehensive company profile information.
 
   Args:
@@ -70,8 +70,7 @@ async def get_company_profile(symbol: str, config: RunnableConfig = None) -> str
   Returns:
       JSON string with company profile data
   """
-  print(f"🏢 FMP TOOL CALLED: get_company_profile for {symbol}")
-  logger.info(f"Getting company profile for {symbol}")
+  logger.info("Getting company profile for %s", symbol)
 
   try:
     client = _get_fmp_client()
@@ -84,11 +83,11 @@ async def get_company_profile(symbol: str, config: RunnableConfig = None) -> str
       api_endpoint=f"/profile/{symbol}",
     )
 
-  except FMPError as e:
-    logger.error(f"FMP API error for {symbol}: {e}")
+  except FMPError:
+    logger.exception("FMP API error for %s", symbol)
     return f"Error getting company profile for {symbol}"
-  except Exception as e:
-    logger.error(f"Unexpected error for {symbol}: {e}")
+  except Exception:
+    logger.exception("Unexpected error for %s", symbol)
     return f"Error getting company profile for {symbol}"
 
 
@@ -96,81 +95,50 @@ async def get_company_profile(symbol: str, config: RunnableConfig = None) -> str
 
 
 @tool(
-  description="Get detailed stock quote with price, volume, P/E ratio, market cap, year high/low, and trading information",
+  description="Get stock quote with price, volume, P/E ratio, market cap, year high/low for stocks and indices. Use ^ prefix for major indices (^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)",
 )
-async def get_full_stock_quote(symbol: str, config: RunnableConfig = None) -> str:
-  """Get full stock quote with detailed information.
+async def get_stock_quote(
+  symbol: str,
+  _: RunnableConfig = None,
+) -> str:
+  """Get stock quote with detailed information for stocks and indices.
 
   Args:
-      symbol: Stock symbol (e.g., AAPL, GOOGL, MSFT)
+      symbol: Stock or index symbol (e.g., AAPL, GOOGL, MSFT, ^SPX, ^DJI, ^VIX)
       config: Runtime configuration (unused but kept for consistency)
 
   Returns:
-      JSON string with detailed stock quote data
+      JSON string with stock quote data
   """
-  print(f"📈 FMP TOOL CALLED: get_full_stock_quote for {symbol}")
-  logger.info(f"Getting full quote for {symbol}")
+  logger.info("Getting quote for %s", symbol)
 
   try:
     client = _get_fmp_client()
-    quote = await client.get_full_quote(symbol)
+    quote = await client.get_quote(symbol)
 
     return _format_fmp_response(
       data=quote,
       symbol=symbol,
-      endpoint_name="Full Stock Quote",
+      endpoint_name="Stock Quote",
       api_endpoint=f"/quote/{symbol}",
     )
 
   except FMPError:
-    return f"Error getting full quote for {symbol}"
+    return f"Error getting quote for {symbol}"
   except Exception:
-    return f"Error getting full quote for {symbol}"
-
+    logger.exception("Unexpected error for %s", symbol)
+    return f"Error getting quote for {symbol}"
 
 @tool(
-  description="Get basic quote with current price and volume for stocks and indices - useful for quick price checks. Use ^ prefix for major indices (^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)",
+  description="Get historical end-of-day price data for stocks and indices - useful for daily price analysis and long-term chart patterns. Use ^ prefix for major indices (^DJI, ^VIX, ^SPX). Use ^GSPC for ^SPX.",
 )
-async def get_short_stock_quote(symbol: str, config: RunnableConfig = None) -> str:
-  """Get short quote with basic price and volume information for stocks and indices.
-
-  Args:
-      symbol: Stock or index symbol (e.g., AAPL, GOOGL, MSFT, SPY, ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)
-      config: Runtime configuration (unused but kept for consistency)
-
-  Returns:
-      JSON string with basic quote data
-  """
-  print(f"📊 FMP TOOL CALLED: get_short_stock_quote for {symbol}")
-  logger.info(f"Getting short quote for {symbol}")
-
-  try:
-    client = _get_fmp_client()
-    quote = await client.get_short_quote(symbol)
-
-    return _format_fmp_response(
-      data=quote,
-      symbol=symbol,
-      endpoint_name="Short Quote",
-      api_endpoint=f"/stable/quote-short?symbol={symbol}",
-    )
-
-  except FMPError:
-    return f"Error getting short quote for {symbol}"
-  except Exception:
-    return f"Error getting short quote for {symbol}"
-
-
-@tool(
-  description="Get historical end-of-day price data for stocks and indices - useful for daily price analysis and long-term chart patterns. Use ^ prefix for major indices (^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)",
-)
-async def get_light_chart(
+async def get_eod_quotes(
   symbol: str,
   from_date: Optional[str] = None,
   to_date: Optional[str] = None,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> str:
-  """Get historical price data (light chart) with end-of-day data for stocks and indices.
+  """Get historical end-of-day quotes for stocks and indices.
 
   Args:
       symbol: Stock or index symbol (e.g., AAPL, SPY, QQQ, DIA, IWM, VTI, ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)
@@ -179,14 +147,13 @@ async def get_light_chart(
       config: Runtime configuration (unused but kept for consistency)
 
   Returns:
-      JSON string with historical price data
+      JSON string with historical end-of-day price data
   """
-  print(f"📊 FMP TOOL CALLED: get_light_chart for {symbol}")
-  logger.info(f"Getting light chart for {symbol}")
+  logger.info("Getting end-of-day quotes for %s", symbol)
 
   try:
     client = _get_fmp_client()
-    chart_data = await client.get_light_chart(symbol, from_date, to_date)
+    chart_data = await client.get_eod_quotes(symbol, from_date, to_date)
 
     # Build endpoint URL with parameters for the stable endpoint
     endpoint = f"/stable/historical-price-eod/light?symbol={symbol}"
@@ -201,14 +168,14 @@ async def get_light_chart(
     return _format_fmp_response(
       data=chart_data,
       symbol=symbol,
-      endpoint_name="Light Chart (EOD)",
+      endpoint_name="End-of-Day Quotes",
       api_endpoint=endpoint,
     )
 
   except FMPError:
-    return f"Error getting light chart for {symbol}"
+    return f"Error getting end-of-day quotes for {symbol}"
   except Exception:
-    return f"Error getting light chart for {symbol}"
+    return f"Error getting end-of-day quotes for {symbol}"
 
 
 # Economic Data Tools
@@ -236,8 +203,7 @@ async def get_economic_events(
   Returns:
       JSON string containing economic events
   """
-  print(f"📅 FMP TOOL CALLED: get_economic_events from {from_date} to {to_date}")
-  logger.info(f"Getting economic events from {from_date} to {to_date}")
+  logger.info("Getting economic events from %s to %s", from_date, to_date)
 
   try:
     client = _get_fmp_client()
@@ -264,7 +230,7 @@ async def get_economic_events(
 @tool(
   description="Get current US Treasury rates for various maturities (1m, 3m, 6m, 1y, 2y, 5y, 10y, 30y) for the past 30 days",
 )
-async def get_treasury_rates(config: RunnableConfig = None) -> str:
+async def get_treasury_rates(_: RunnableConfig = None) -> str:
   """Get US Treasury rates for the past 30 days.
 
   Args:
@@ -273,7 +239,6 @@ async def get_treasury_rates(config: RunnableConfig = None) -> str:
   Returns:
       JSON string containing treasury rates data
   """
-  print("💰 FMP TOOL CALLED: get_treasury_rates")
   logger.info("Getting treasury rates")
 
   try:
@@ -303,7 +268,7 @@ async def get_income_statement(
   symbol: str,
   period: str = "annual",
   limit: int = 5,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> str:
   """Get income statement data for a company.
 
@@ -316,8 +281,7 @@ async def get_income_statement(
   Returns:
       JSON string with income statement data
   """
-  print(f"💼 FMP TOOL CALLED: get_income_statement for {symbol}")
-  logger.info(f"Getting income statement for {symbol}")
+  logger.info("Getting income statement for %s", symbol)
 
   try:
     client = _get_fmp_client()
@@ -343,7 +307,7 @@ async def get_balance_sheet(
   symbol: str,
   period: str = "annual",
   limit: int = 5,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> str:
   """Get balance sheet data for a company.
 
@@ -356,8 +320,7 @@ async def get_balance_sheet(
   Returns:
       JSON string with balance sheet data
   """
-  print(f"🏦 FMP TOOL CALLED: get_balance_sheet for {symbol}")
-  logger.info(f"Getting balance sheet for {symbol}")
+  logger.info("Getting balance sheet for %s", symbol)
 
   try:
     client = _get_fmp_client()
@@ -383,7 +346,7 @@ async def get_cash_flow(
   symbol: str,
   period: str = "annual",
   limit: int = 5,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> str:
   """Get cash flow statement data for a company.
 
@@ -396,8 +359,7 @@ async def get_cash_flow(
   Returns:
       JSON string with cash flow statement data
   """
-  print(f"💸 FMP TOOL CALLED: get_cash_flow for {symbol}")
-  logger.info(f"Getting cash flow for {symbol}")
+  logger.info("Getting cash flow for %s", symbol)
 
   try:
     client = _get_fmp_client()
@@ -426,7 +388,7 @@ async def get_key_metrics(
   symbol: str,
   period: str = "annual",
   limit: int = 5,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> str:
   """Get key financial metrics for a company.
 
@@ -439,8 +401,7 @@ async def get_key_metrics(
   Returns:
       JSON string with key metrics data
   """
-  print(f"📊 FMP TOOL CALLED: get_key_metrics for {symbol}")
-  logger.info(f"Getting key metrics for {symbol}")
+  logger.info("Getting key metrics for %s", symbol)
 
   try:
     client = _get_fmp_client()
@@ -468,7 +429,7 @@ async def get_key_metrics(
 async def search_stock_symbols(
   query: str,
   limit: int = 10,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> str:
   """Search for stock symbols by company name or partial match.
 
@@ -480,8 +441,7 @@ async def search_stock_symbols(
   Returns:
       JSON string with search results
   """
-  print(f"🔍 FMP TOOL CALLED: search_stock_symbols for '{query}'")
-  logger.info(f"Searching symbols for query: {query}")
+  logger.info("Searching symbols for query: %s", query)
 
   try:
     client = _get_fmp_client()
@@ -501,12 +461,12 @@ async def search_stock_symbols(
 
 
 @tool(
-  description="Get recent news articles about specific stocks or general market news - useful for current events and market sentiment",
+  description="Get recent news articles about specific stocks - useful for current events. Will not work for indices.",
 )
 async def get_stock_news(
   symbols: Optional[List[str]] = None,
   limit: int = 20,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> str:
   """Get recent stock news articles.
 
@@ -519,8 +479,7 @@ async def get_stock_news(
       JSON string with news articles
   """
   symbols_str = ", ".join(symbols) if symbols else "general"
-  print(f"📰 FMP TOOL CALLED: get_stock_news for {symbols_str}")
-  logger.info(f"Getting stock news for symbols: {symbols}")
+  logger.info("Getting stock news for symbols: %s", symbols_str)
 
   try:
     client = _get_fmp_client()

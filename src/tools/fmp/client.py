@@ -84,28 +84,21 @@ class FMPClient:
     return data[0] if isinstance(data, list) and data else data
 
   # Stock Quotes
-  async def get_full_quote(self, symbol: str) -> Dict[str, Any]:
-    """Get full stock quote with detailed information."""
-    params = {"symbol": symbol}
-    data = await self._make_request("quote", params, use_stable=True)
-    return data[0] if isinstance(data, list) and data else data
-
-  async def get_short_quote(self, symbol: str) -> Dict[str, Any]:
-    """Get short quote with basic price and volume using stable endpoint.
-
+  async def get_quote(self, symbol: str) -> Dict[str, Any]:
+    """Get stock quote with detailed information.
+    
     Use ^ prefix for major indices: ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX
     """
-    params = {"symbol": symbol}
-    data = await self._make_request("quote-short", params, use_stable=True)
+    data = await self._make_request(f"quote/{symbol}")
     return data[0] if isinstance(data, list) and data else data
 
-  async def get_light_chart(
+  async def get_eod_quotes(
     self,
     symbol: str,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
   ) -> List[Dict[str, Any]]:
-    """Get historical price data (light chart) using stable endpoint for stocks and indices.
+    """Get historical end-of-day quotes using stable endpoint for stocks and indices.
 
     Args:
         symbol: Stock or index symbol (e.g., AAPL, SPY, QQQ, ^GSPC, ^VIX, ^SPX)
@@ -114,7 +107,7 @@ class FMPClient:
         to_date: End date in YYYY-MM-DD format (optional)
 
     Returns:
-        List of historical price data
+        List of historical end-of-day price data
     """
     params = {"symbol": symbol}
     if from_date:

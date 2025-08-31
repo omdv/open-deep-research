@@ -53,7 +53,6 @@ async def tavily_search(
     max_results=max_results,
     topic=topic,
     include_raw_content=True,
-    config=config,
   )
 
   # Step 2: Deduplicate results by URL to avoid processing the same content multiple times

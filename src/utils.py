@@ -21,11 +21,10 @@ from open_deep_research.tools.fmp.tools import (
   get_cash_flow,
   get_company_profile,
   get_economic_events,
-  get_full_stock_quote,
+  get_stock_quote,
   get_income_statement,
   get_key_metrics,
-  get_light_chart,
-  get_short_stock_quote,
+  get_eod_quotes,
   get_stock_news,
   get_treasury_rates,
 )
@@ -256,9 +255,8 @@ async def get_all_tools(config: RunnableConfig) -> List[BaseTool]:
   # Add Financial Modeling Prep tools
   fmp_tools = [
     get_company_profile,
-    get_full_stock_quote,
-    get_short_stock_quote,
-    get_light_chart,
+    get_stock_quote,
+    get_eod_quotes,
     get_economic_events,
     get_treasury_rates,
     get_income_statement,

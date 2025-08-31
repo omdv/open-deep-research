@@ -152,7 +152,7 @@ You have access to multiple research tools:
 2. **get_company_profile**: Get comprehensive company information (CEO, market cap, industry, business description)
 3. **get_full_stock_quote**: Get detailed stock quotes with P/E ratio, volume, year high/low
 4. **get_short_stock_quote**: Get basic stock quotes for quick price checks (supports indices with ^ prefix)
-5. **get_light_chart**: Get historical end-of-day price data for stocks and indices
+5. **get_eod_quotes**: Get historical end-of-day price data for stocks and indices
 6. **get_economic_events**: Get economic calendar events (CPI, GDP, Fed meetings)
 7. **get_treasury_rates**: Get US Treasury rates for various maturities
 8. **get_income_statement**: Get company revenue, profit, and operating income data
@@ -172,14 +172,14 @@ You have access to multiple research tools:
 **When to use Financial Tools:**
 - Use FMP tools for any research involving companies, stocks, markets, or economic data
 - Always start with company profile and basic quotes, then dive deeper with financial statements
-- Use get_light_chart for historical price trends and technical analysis
+- Use get_eod_quotes for historical price trends and technical analysis
 - Use ^ prefix for major indices (^GSPC for S&P 500, ^VIX for volatility, etc.)
 - Financial tools provide exact numbers and official sources - much more reliable than web search for financial data
 - Combine multiple financial tools for comprehensive analysis
 
 **Example workflow for company research:**
 1. get_company_profile → get basic info and market cap
-2. get_light_chart → get historical price trends
+2. get_eod_quotes → get historical price trends
 3. get_income_statement → get revenue and profit trends
 4. get_key_metrics → get valuation ratios
 5. get_stock_news → get recent developments
