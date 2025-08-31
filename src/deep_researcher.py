@@ -15,7 +15,6 @@ from langchain_core.messages import (
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
-
 from open_deep_research.configuration import (
   Configuration,
 )

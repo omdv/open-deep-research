@@ -90,13 +90,12 @@ class FMPClient:
 
   async def get_short_quote(self, symbol: str) -> Dict[str, Any]:
     """Get short quote with basic price and volume using stable endpoint.
-    
+
     Use ^ prefix for major indices: ^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX
     """
     params = {"symbol": symbol}
     data = await self._make_request("quote-short", params, use_stable=True)
     return data[0] if isinstance(data, list) and data else data
-
 
   async def get_light_chart(
     self,
@@ -121,7 +120,9 @@ class FMPClient:
     if to_date:
       params["to"] = to_date
 
-    data = await self._make_request("historical-price-eod/light", params, use_stable=True)
+    data = await self._make_request(
+      "historical-price-eod/light", params, use_stable=True
+    )
     return data if isinstance(data, list) else [data] if data else []
 
   # Economic Data

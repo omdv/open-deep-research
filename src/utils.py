@@ -9,7 +9,6 @@ from langchain_core.messages import (
 )
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, StructuredTool, tool
-
 from open_deep_research.configuration import Configuration, SearchAPI
 from open_deep_research.state import ResearchComplete
 

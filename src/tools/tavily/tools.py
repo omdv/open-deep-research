@@ -9,12 +9,11 @@ from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
-from tavily import AsyncTavilyClient
-
 from open_deep_research.configuration import Configuration
 from open_deep_research.helpers import get_api_key_for_model, get_today_str
 from open_deep_research.prompts import summarize_webpage_prompt
 from open_deep_research.state import Summary
+from tavily import AsyncTavilyClient
 
 logger = logging.getLogger(__name__)
 

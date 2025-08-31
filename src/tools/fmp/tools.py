@@ -161,7 +161,6 @@ async def get_short_stock_quote(symbol: str, config: RunnableConfig = None) -> s
     return f"Error getting short quote for {symbol}"
 
 
-
 @tool(
   description="Get historical end-of-day price data for stocks and indices - useful for daily price analysis and long-term chart patterns. Use ^ prefix for major indices (^GSPC, ^IXIC, ^DJI, ^VIX, ^SPX)",
 )
