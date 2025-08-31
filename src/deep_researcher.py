@@ -352,13 +352,6 @@ async def supervisor_tools(
           ),
         )
 
-      # Aggregate raw notes from all research results
-      raw_notes_concat = "\n".join(
-        ["\n".join(observation.get("raw_notes", [])) for observation in tool_results],
-      )
-
-      if raw_notes_concat:
-        update_payload["raw_notes"] = [raw_notes_concat]
 
     except Exception as e:
       # Handle research execution errors
@@ -622,7 +615,6 @@ async def compress_research(state: ResearcherState, config: RunnableConfig):
       # Return successful compression result
       return {
         "compressed_research": str(response.content),
-        "raw_notes": [raw_notes_content],
       }
 
     except Exception as e:
@@ -649,7 +641,6 @@ async def compress_research(state: ResearcherState, config: RunnableConfig):
 
   return {
     "compressed_research": "Error synthesizing research report: Maximum retries exceeded",
-    "raw_notes": [raw_notes_content],
   }
 
 

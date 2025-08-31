@@ -15,6 +15,7 @@ class FMPError(Exception):
   """Custom exception for FMP API errors."""
 
   def __init__(self, status_code: int, message: str = "") -> None:
+    """Initialize the FMP error."""
     self.status_code = status_code
     self.message = message
     super().__init__(f"FMP API error {status_code}: {message}")
@@ -67,7 +68,8 @@ class FMPClient:
             raise FMPError(response.status, error_text)
 
           data = await response.json()
-          if not data and response.status == 200:
+          good_status_codes = [200, 201]
+          if not data and response.status in good_status_codes:
             raise FMPError(404, "No data found")
 
           return data
@@ -121,7 +123,9 @@ class FMPClient:
       params["to"] = to_date
 
     data = await self._make_request(
-      "historical-price-eod/light", params, use_stable=True
+      "historical-price-eod/light",
+      params,
+      use_stable=True,
     )
     return data if isinstance(data, list) else [data] if data else []
 
@@ -138,10 +142,14 @@ class FMPClient:
     from_dt = datetime.strptime(from_date, "%Y-%m-%d")
     to_dt = datetime.strptime(to_date, "%Y-%m-%d")
 
-    if (to_dt - from_dt).days > 30:
-      to_date = (from_dt + timedelta(days=30)).strftime("%Y-%m-%d")
+    max_days = 30
+    if (to_dt - from_dt).days > max_days:
+      to_date = (from_dt + timedelta(days=max_days)).strftime("%Y-%m-%d")
       logger.warning(
-        f"Date range limited to 30 days, adjusted to: {from_date} to {to_date}",
+        "Date range limited to %s days, adjusted to: %s to %s",
+        max_days,
+        from_date,
+        to_date,
       )
 
     params = {"from": from_date, "to": to_date}
@@ -152,13 +160,11 @@ class FMPClient:
       impact = impact or ["High", "Medium"]
       countries = countries or ["US", "EA"]
 
-      filtered_data = [
+      return [
         event
         for event in data
         if event.get("impact") in impact and event.get("country") in countries
       ]
-      return filtered_data
-
     return data
 
   async def get_treasury_rates(self) -> List[Dict[str, Any]]:

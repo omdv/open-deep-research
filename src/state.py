@@ -58,7 +58,10 @@ class ResearchQuestion(BaseModel):
 ###################
 
 
-def override_reducer(current_value, new_value):
+def override_reducer(
+  current_value: list[MessageLikeRepresentation],
+  new_value: MessageLikeRepresentation,
+) -> list[MessageLikeRepresentation]:
   """Reducer function that allows overriding values in state."""
   if isinstance(new_value, dict) and new_value.get("type") == "override":
     return new_value.get("value", new_value)
@@ -74,8 +77,7 @@ class AgentState(MessagesState):
 
   supervisor_messages: Annotated[list[MessageLikeRepresentation], override_reducer]
   research_brief: Optional[str]
-  raw_notes: Annotated[list[str], override_reducer] = []
-  notes: Annotated[list[str], override_reducer] = []
+  notes: Annotated[list[str], override_reducer]
   final_report: str
 
 
@@ -84,9 +86,8 @@ class SupervisorState(TypedDict):
 
   supervisor_messages: Annotated[list[MessageLikeRepresentation], override_reducer]
   research_brief: str
-  notes: Annotated[list[str], override_reducer] = []
+  notes: Annotated[list[str], override_reducer]
   research_iterations: int = 0
-  raw_notes: Annotated[list[str], override_reducer] = []
 
 
 class ResearcherState(TypedDict):
@@ -96,11 +97,9 @@ class ResearcherState(TypedDict):
   tool_call_iterations: int = 0
   research_topic: str
   compressed_research: str
-  raw_notes: Annotated[list[str], override_reducer] = []
 
 
 class ResearcherOutputState(BaseModel):
   """Output state from individual researchers."""
 
   compressed_research: str
-  raw_notes: Annotated[list[str], override_reducer] = []

@@ -23,7 +23,6 @@ TAVILY_SEARCH_DESCRIPTION = (
   "Useful for when you need to answer questions about current events."
 )
 
-
 @tool(description=TAVILY_SEARCH_DESCRIPTION)
 async def tavily_search(
   queries: List[str],
@@ -46,8 +45,7 @@ async def tavily_search(
       Formatted string containing summarized search results
   """
   # Add logging to see when tool is called
-  print(f"🔍 TAVILY TOOL CALLED: Searching for queries: {queries}")
-  logger.info(f"Tavily Tool called with queries: {queries}")
+  logger.info("Tavily Tool called with queries: %s", queries)
 
   # Step 1: Execute search queries asynchronously
   search_results = await tavily_search_async(
@@ -88,9 +86,9 @@ async def tavily_search(
   )
 
   # Step 4: Create summarization tasks (skip empty content)
-  async def noop():
+  async def noop() -> Summary:
     """No-op function for results without raw content."""
-    return
+    return Summary(summary="", key_excerpts="")
 
   summarization_tasks = [
     summarization_model.ainvoke(
@@ -135,8 +133,9 @@ async def tavily_search_async(
   queries: List[str],
   max_results: int = 5,
   topic: Literal["general", "news", "finance"] = "general",
+  *,
   include_raw_content: bool = True,
-  config: RunnableConfig = None,
+  _: RunnableConfig = None,
 ) -> List[Dict]:
   """Execute multiple Tavily search queries asynchronously."""
   api_key = os.getenv("TAVILY_API_KEY")
@@ -197,10 +196,7 @@ async def tavily_search_async(
             "results": result.get("results", []),
           },
         )
-
-    return formatted_results
-
-  except Exception as e:
+  except (TimeoutError, OSError, Exception) as e:
     # Fallback for unexpected errors
     return [
       {
@@ -209,3 +205,5 @@ async def tavily_search_async(
       }
       for query in queries
     ]
+  else:
+    return formatted_results
