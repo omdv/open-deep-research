@@ -33,10 +33,12 @@ from open_deep_research.state import (
   AgentState,
   ClarifyWithUser,
   ConductResearch,
+  ExtractKnowledge,
   ResearchComplete,
   ResearcherOutputState,
   ResearcherState,
   ResearchQuestion,
+  RetrieveKnowledge,
   SupervisorState,
 )
 from open_deep_research.utils import (
@@ -203,8 +205,14 @@ async def supervisor(
     "tags": ["langsmith:nostream"],
   }
 
-  # Available tools: research delegation, completion signaling, and strategic thinking
-  lead_researcher_tools = [ConductResearch, ResearchComplete, think_tool]
+  # Available tools: research delegation, completion signaling, knowledge extraction, and strategic thinking
+  lead_researcher_tools = [
+    ConductResearch,
+    ResearchComplete,
+    ExtractKnowledge,
+    RetrieveKnowledge,
+    think_tool,
+  ]
 
   # Configure model with tools, retry logic, and model settings
   research_model = (
@@ -344,14 +352,13 @@ async def supervisor_tools(
 
       # Handle overflow research calls with error messages
       for overflow_call in overflow_conduct_research_calls:
-        all_tool_messages.append(
+        all_tool_messages.extend(
           ToolMessage(
             content=f"Error: Did not run this research as you have already exceeded the maximum number of concurrent research units. Please try again with {configurable.max_concurrent_research_units} or fewer research units.",
             name="ConductResearch",
             tool_call_id=overflow_call["id"],
           ),
         )
-
 
     except Exception as e:
       # Handle research execution errors
@@ -364,6 +371,66 @@ async def supervisor_tools(
             "research_brief": state.get("research_brief", ""),
           },
         )
+
+  # Handle ExtractKnowledge calls (knowledge graph integration)
+  extract_knowledge_calls = [
+    tool_call
+    for tool_call in most_recent_message.tool_calls
+    if tool_call["name"] == "ExtractKnowledge"
+  ]
+
+  for tool_call in extract_knowledge_calls:
+    try:
+      # Import knowledge extraction here to avoid circular imports
+      from open_deep_research.knowledge_extraction import create_knowledge_integrator
+
+      # Get or create knowledge integrator
+      kg_integrator = await create_knowledge_integrator(configurable)
+
+      if kg_integrator:
+        # Initialize session if not already done
+        if not kg_integrator.current_agent_run_id:
+          research_brief = state.get("research_brief", "")
+          # Extract initial query from supervisor messages
+          initial_query = "Research Query"  # Could extract from messages
+          await kg_integrator.initialize_research_session(initial_query, research_brief)
+
+        # Process knowledge extraction
+        research_content = tool_call["args"]["research_content"]
+        research_context = tool_call["args"]["research_context"]
+
+        success = await kg_integrator.process_research_results(
+          research_content,
+          research_context,
+          {"title": research_context, "type": "research_extraction"},
+          config,
+        )
+
+        result_message = (
+          "Knowledge extracted and stored in knowledge graph successfully."
+          if success
+          else "Failed to extract knowledge to knowledge graph."
+        )
+        await kg_integrator.close()
+      else:
+        result_message = "Knowledge graph storage is disabled - extraction skipped."
+
+      all_tool_messages.append(
+        ToolMessage(
+          content=result_message,
+          name="ExtractKnowledge",
+          tool_call_id=tool_call["id"],
+        ),
+      )
+
+    except Exception as e:
+      all_tool_messages.append(
+        ToolMessage(
+          content=f"Error extracting knowledge: {e!s}",
+          name="ExtractKnowledge",
+          tool_call_id=tool_call["id"],
+        ),
+      )
 
   # Step 3: Return command with all tool results
   update_payload["supervisor_messages"] = all_tool_messages

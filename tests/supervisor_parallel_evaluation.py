@@ -3,7 +3,6 @@ import uuid
 
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-
 from open_deep_research.deep_researcher import deep_researcher_builder
 
 client = Client()

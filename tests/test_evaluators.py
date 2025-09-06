@@ -2,9 +2,9 @@ from typing import cast
 
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
+from open_deep_research.utils import get_today_str
 from pydantic import BaseModel, Field
 
-from open_deep_research.utils import get_today_str
 from tests.test_prompts import (
   COMPLETENESS_PROMPT,
   CORRECTNESS_PROMPT,
@@ -75,7 +75,7 @@ def eval_overall_quality(inputs: dict, outputs: dict):
       },
     ]
   eval_result = cast(
-    OverallQualityScore,
+    "OverallQualityScore",
     eval_model.with_structured_output(OverallQualityScore).invoke(
       [
         {
@@ -124,7 +124,7 @@ def eval_relevance(inputs: dict, outputs: dict):
     ]
 
   eval_result = cast(
-    RelevanceScore,
+    "RelevanceScore",
     eval_model.with_structured_output(RelevanceScore).invoke(
       [
         {
@@ -171,7 +171,7 @@ def eval_structure(inputs: dict, outputs: dict):
     ]
 
   eval_result = cast(
-    StructureScore,
+    "StructureScore",
     eval_model.with_structured_output(StructureScore).invoke(
       [
         {"role": "user", "content": user_input_content},
@@ -216,7 +216,7 @@ def eval_correctness(inputs: dict, outputs: dict, reference_outputs: dict):
     ]
 
   eval_result = cast(
-    CorrectnessScore,
+    "CorrectnessScore",
     eval_model.with_structured_output(CorrectnessScore).invoke(
       [
         {"role": "user", "content": user_input_content},
@@ -264,7 +264,7 @@ def eval_groundedness(inputs: dict, outputs: dict):
     ]
 
   eval_result = cast(
-    GroundednessScore,
+    "GroundednessScore",
     eval_model.with_structured_output(GroundednessScore)
     .with_retry(stop_after_attempt=3)
     .invoke(
@@ -313,7 +313,7 @@ def eval_completeness(inputs: dict, outputs: dict):
     ]
 
   eval_result = cast(
-    CompletenessScore,
+    "CompletenessScore",
     eval_model.with_structured_output(CompletenessScore).invoke(
       [
         {"role": "user", "content": user_input_content},

@@ -70,3 +70,11 @@ temp/
 
 # Ruff
 .ruff_cache/
+
+# Knowledge Graph
+neo4j_data/
+neo4j_logs/
+
+# Prompts and results
+prompts/
+results/

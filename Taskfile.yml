@@ -1,0 +1,231 @@
+version: '3'
+
+vars:
+  NEO4J_CONTAINER_NAME:
+    sh: echo "${NEO4J_CONTAINER_NAME:-neo4j-research}"
+  NEO4J_USERNAME:
+    sh: echo "${NEO4J_USERNAME}"
+  NEO4J_PASSWORD:
+    sh: echo "${NEO4J_PASSWORD}"
+  NEO4J_DATA_DIR:
+    sh: echo "${NEO4J_DATA_DIR:-./neo4j_data}"
+  NEO4J_LOGS_DIR:
+    sh: echo "${NEO4J_LOGS_DIR:-./neo4j_logs}"
+  NEO4J_VERSION:
+    sh: echo "${NEO4J_VERSION:-5.15}"
+  NEO4J_URI:
+    sh: echo "${NEO4J_URI:-bolt://localhost:7687}"
+
+tasks:
+  neo4j:start:
+    desc: "Start Neo4j database in Docker"
+    cmds:
+      - |
+        echo "🚀 Starting Neo4j database..."
+        docker run \
+          --name {{.NEO4J_CONTAINER_NAME}} \
+          -p 7474:7474 -p 7687:7687 \
+          -d \
+          -v {{.NEO4J_DATA_DIR}}:/data \
+          -v {{.NEO4J_LOGS_DIR}}:/logs \
+          -v {{.NEO4J_CONTAINER_NAME}}_import:/var/lib/neo4j/import \
+          --env NEO4J_AUTH={{.NEO4J_USERNAME}}/{{.NEO4J_PASSWORD}} \
+          --env NEO4J_PLUGINS=["apoc"] \
+          neo4j:{{.NEO4J_VERSION}}
+        echo "✅ Neo4j started successfully!"
+        echo "📊 Neo4j Browser: http://localhost:7474"
+        echo "🔌 Bolt URI: bolt://localhost:7687"
+        echo "👤 Username: neo4j"
+        echo "🔐 Password: {{.NEO4J_PASSWORD}}"
+    status:
+      - docker ps | grep {{.NEO4J_CONTAINER_NAME}} | grep -q "Up"
+
+  neo4j:stop:
+    desc: "Stop Neo4j database"
+    cmds:
+      - |
+        echo "🛑 Stopping Neo4j database..."
+        docker stop {{.NEO4J_CONTAINER_NAME}} || true
+        echo "✅ Neo4j stopped"
+
+  neo4j:restart:
+    desc: "Restart Neo4j database"
+    cmds:
+      - task: neo4j:stop
+      - task: neo4j:start
+
+  neo4j:remove:
+    desc: "Remove Neo4j container (keeps data)"
+    cmds:
+      - |
+        echo "🗑️  Removing Neo4j container..."
+        docker stop {{.NEO4J_CONTAINER_NAME}} || true
+        docker rm {{.NEO4J_CONTAINER_NAME}} || true
+        echo "✅ Neo4j container removed (data preserved)"
+
+  neo4j:clean:
+    desc: "Remove Neo4j container and all data"
+    prompt: "This will delete all Neo4j data. Are you sure?"
+    cmds:
+      - |
+        echo "🧹 Cleaning up Neo4j completely..."
+        docker stop {{.NEO4J_CONTAINER_NAME}} || true
+        docker rm {{.NEO4J_CONTAINER_NAME}} || true
+        docker volume rm {{.NEO4J_CONTAINER_NAME}}_import || true
+        rm -rf {{.NEO4J_DATA_DIR}} {{.NEO4J_LOGS_DIR}}
+        echo "✅ Neo4j completely removed"
+
+  neo4j:status:
+    desc: "Check Neo4j status"
+    cmds:
+      - |
+        echo "📊 Neo4j Status:"
+        if docker ps | grep {{.NEO4J_CONTAINER_NAME}} | grep -q "Up"; then
+          echo "✅ Neo4j is running"
+          echo "🌐 Browser: http://localhost:7474"
+          echo "🔌 Bolt: bolt://localhost:7687"
+          echo "👤 Username: neo4j"
+          echo "🔐 Password: {{.NEO4J_PASSWORD}}"
+          echo ""
+          echo "📈 Container Stats:"
+          docker stats {{.NEO4J_CONTAINER_NAME}} --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+        else
+          echo "❌ Neo4j is not running"
+          echo "💡 Run 'task neo4j:start' to start it"
+        fi
+
+  neo4j:logs:
+    desc: "Show Neo4j logs"
+    cmds:
+      - |
+        echo "📋 Neo4j Logs:"
+        docker logs {{.NEO4J_CONTAINER_NAME}} --tail 50 -f
+
+  neo4j:shell:
+    desc: "Open Neo4j cypher-shell"
+    cmds:
+      - |
+        echo "🐚 Opening Neo4j cypher-shell..."
+        echo "💡 Use :exit to quit"
+        docker exec -it {{.NEO4J_CONTAINER_NAME}} cypher-shell -u neo4j -p {{.NEO4J_PASSWORD}}
+
+  neo4j:browser:
+    desc: "Open Neo4j Browser in default browser"
+    cmds:
+      - |
+        echo "🌐 Opening Neo4j Browser..."
+        case "$(uname -s)" in
+          Darwin) open http://localhost:7474 ;;
+          Linux) xdg-open http://localhost:7474 ;;
+          CYGWIN*|MINGW32*|MSYS*|MINGW*) start http://localhost:7474 ;;
+        esac
+        echo "👤 Username: neo4j"
+        echo "🔐 Password: {{.NEO4J_PASSWORD}}"
+
+  neo4j:backup:
+    desc: "Backup Neo4j database"
+    cmds:
+      - |
+        BACKUP_FILE="neo4j-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
+        echo "💾 Creating backup: $BACKUP_FILE"
+        tar -czf "$BACKUP_FILE" {{.NEO4J_DATA_DIR}} {{.NEO4J_LOGS_DIR}}
+        echo "✅ Backup created: $BACKUP_FILE"
+
+  test:neo4j:
+    desc: "Test Neo4j connection and basic operations"
+    cmds:
+      - |
+        echo "🧪 Testing Neo4j connection..."
+        if ! docker ps | grep {{.NEO4J_CONTAINER_NAME}} | grep -q "Up"; then
+          echo "❌ Neo4j is not running. Starting it first..."
+          task neo4j:start
+          echo "⏳ Waiting for Neo4j to be ready..."
+          sleep 10
+        fi
+
+        echo "📋 Running basic connectivity test..."
+        docker exec {{.NEO4J_CONTAINER_NAME}} cypher-shell -u neo4j -p {{.NEO4J_PASSWORD}} "RETURN 'Connection successful!' as test;"
+
+        echo "📊 Database info:"
+        docker exec {{.NEO4J_CONTAINER_NAME}} cypher-shell -u neo4j -p {{.NEO4J_PASSWORD}} "CALL dbms.components() YIELD name, versions, edition RETURN name, versions[0] as version, edition;"
+
+  env:neo4j:
+    desc: "Generate .env file for Neo4j configuration"
+    cmds:
+      - |
+        echo "📝 Generating .env file for Neo4j configuration..."
+        cat > .env.neo4j << EOF
+        # Neo4j Configuration for Knowledge Graph
+        NEO4J_ENABLED=true
+        NEO4J_URI=bolt://localhost:7687
+        NEO4J_USERNAME=neo4j
+        NEO4J_PASSWORD={{.NEO4J_PASSWORD}}
+        NEO4J_DATABASE=neo4j
+        EOF
+        echo "✅ Created .env.neo4j file"
+        echo "💡 Add these to your main .env file or source .env.neo4j"
+
+  dev:setup:
+    desc: "Complete development setup with Neo4j"
+    cmds:
+      - task: neo4j:start
+      - task: env:neo4j
+      - |
+        echo "⏳ Waiting for Neo4j to be fully ready..."
+        sleep 15
+      - task: test:neo4j
+      - |
+        echo ""
+        echo "🎉 Development setup complete!"
+        echo ""
+        echo "📋 What's running:"
+        echo "  • Neo4j Database: http://localhost:7474"
+        echo "  • Bolt endpoint: bolt://localhost:7687"
+        echo ""
+        echo "🔑 Credentials:"
+        echo "  • Username: neo4j"
+        echo "  • Password: {{.NEO4J_PASSWORD}}"
+        echo ""
+        echo "📁 Files created:"
+        echo "  • .env.neo4j (add to your .env file)"
+        echo "  • ./neo4j_data/ (database files)"
+        echo "  • ./neo4j_logs/ (log files)"
+        echo ""
+        echo "🚀 Next steps:"
+        echo "  1. Source the environment: source .env.neo4j"
+        echo "  2. Run your research agent with Neo4j integration enabled"
+        echo "  3. Open Neo4j Browser to explore the knowledge graph"
+
+  help:
+    desc: "Show available Neo4j tasks"
+    cmds:
+      - |
+        echo "🗂️  Available Neo4j Tasks:"
+        echo ""
+        echo "📊 Database Management:"
+        echo "  neo4j:start     - Start Neo4j in Docker"
+        echo "  neo4j:stop      - Stop Neo4j database"
+        echo "  neo4j:restart   - Restart Neo4j database"
+        echo "  neo4j:status    - Check Neo4j status"
+        echo "  neo4j:logs      - Show Neo4j logs"
+        echo ""
+        echo "🛠️  Utilities:"
+        echo "  neo4j:shell     - Open cypher-shell"
+        echo "  neo4j:browser   - Open Neo4j Browser"
+        echo "  neo4j:backup    - Backup database"
+        echo ""
+        echo "🧪 Testing:"
+        echo "  test:neo4j      - Test Neo4j connection"
+        echo "  env:neo4j       - Generate .env configuration"
+        echo ""
+        echo "🚀 Quick Start:"
+        echo "  dev:setup       - Complete development setup"
+        echo ""
+        echo "🧹 Cleanup:"
+        echo "  neo4j:remove    - Remove container (keep data)"
+        echo "  neo4j:clean     - Remove everything (destructive)"
+
+  default:
+    desc: "Show help"
+    cmds:
+      - task: help
