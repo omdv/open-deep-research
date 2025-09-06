@@ -35,7 +35,9 @@ class ExtractedClaim(BaseModel):
     description="Direct quote from source that supports this claim",
   )
   confidence: float = Field(
-    description="Confidence score 0.0-1.0 for this extraction", ge=0.0, le=1.0,
+    description="Confidence score 0.0-1.0 for this extraction",
+    ge=0.0,
+    le=1.0,
   )
   key_evidence: str = Field(
     description="Brief explanation of what makes this claim important",
@@ -53,10 +55,13 @@ class ExtractedConcept(BaseModel):
     description="Brief description of what this concept represents",
   )
   aliases: List[str] = Field(
-    description="Alternative names or synonyms for this concept", default=[],
+    description="Alternative names or synonyms for this concept",
+    default=[],
   )
   importance: float = Field(
-    description="Importance score 0.0-1.0 for this concept", ge=0.0, le=1.0,
+    description="Importance score 0.0-1.0 for this concept",
+    ge=0.0,
+    le=1.0,
   )
 
 
@@ -91,7 +96,10 @@ class KnowledgeExtractor:
     )
 
   async def extract_knowledge_from_research(
-    self, research_content: str, research_topic: str, config: RunnableConfig,
+    self,
+    research_content: str,
+    research_topic: str,
+    config: RunnableConfig,
   ) -> ResearchExtraction:
     """Extract claims and concepts from research content using LLM."""
     extraction_prompt = f"""You are a research analyst tasked with extracting key claims and concepts from research content.
@@ -233,7 +241,9 @@ class KnowledgeGraphIntegrator:
   """Integrates extracted knowledge with the Neo4j knowledge graph."""
 
   def __init__(
-    self, kg_client: Optional[Neo4jKnowledgeGraph], extractor: KnowledgeExtractor,
+    self,
+    kg_client: Optional[Neo4jKnowledgeGraph],
+    extractor: KnowledgeExtractor,
   ):
     """Initialize the knowledge graph integrator."""
     self.kg_client = kg_client
@@ -242,7 +252,9 @@ class KnowledgeGraphIntegrator:
     self.concept_cache: Dict[str, str] = {}  # concept_name -> canonical_name
 
   async def initialize_research_session(
-    self, initial_query: str, research_brief: str,
+    self,
+    initial_query: str,
+    research_brief: str,
   ) -> Optional[str]:
     """Initialize a new research session in the knowledge graph."""
     if not self.kg_client:
@@ -283,7 +295,9 @@ class KnowledgeGraphIntegrator:
     try:
       # Extract knowledge using LLM
       extraction = await self.extractor.extract_knowledge_from_research(
-        research_content, research_topic, config,
+        research_content,
+        research_topic,
+        config,
       )
 
       # Create source node
@@ -319,7 +333,8 @@ class KnowledgeGraphIntegrator:
 
         # Link claim to relevant concepts
         relevant_concepts = self._find_relevant_concepts(
-          claim.claim_text, normalized_concepts,
+          claim.claim_text,
+          normalized_concepts,
         )
         if relevant_concepts:
           await self.kg_client.link_claim_to_concepts(claim_node.id, relevant_concepts)
@@ -334,7 +349,9 @@ class KnowledgeGraphIntegrator:
       return False
 
   async def _normalize_and_store_concept(
-    self, concept: ExtractedConcept, config: RunnableConfig,
+    self,
+    concept: ExtractedConcept,
+    config: RunnableConfig,
   ) -> str:
     """Normalize concept against existing ones and store."""
     if concept.name in self.concept_cache:
@@ -345,7 +362,9 @@ class KnowledgeGraphIntegrator:
 
     # Use LLM to check for similar concepts
     normalization = await self.extractor.normalize_concept(
-      concept, existing_concepts, config,
+      concept,
+      existing_concepts,
+      config,
     )
 
     canonical_name = normalization.canonical_name
@@ -405,7 +424,9 @@ class KnowledgeGraphIntegrator:
     return type_mapping.get(type_str, ConceptType.TOPIC)
 
   def _find_relevant_concepts(
-    self, claim_text: str, concept_mapping: Dict[str, str],
+    self,
+    claim_text: str,
+    concept_mapping: Dict[str, str],
   ) -> List[str]:
     """Find concepts mentioned in claim text."""
     relevant_concepts = []

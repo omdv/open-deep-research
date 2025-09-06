@@ -42,7 +42,8 @@ class RetrieveKnowledge(BaseModel):
     description="List of concept names to search for in the knowledge graph (e.g. ['artificial intelligence', 'machine learning', 'neural networks'])",
   )
   limit: int = Field(
-    description="Maximum number of claims to retrieve", default=10,
+    description="Maximum number of claims to retrieve",
+    default=10,
   )
 
 

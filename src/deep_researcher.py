@@ -37,8 +37,8 @@ from open_deep_research.state import (
   ResearchComplete,
   ResearcherOutputState,
   ResearcherState,
-  RetrieveKnowledge,
   ResearchQuestion,
+  RetrieveKnowledge,
   SupervisorState,
 )
 from open_deep_research.utils import (
@@ -206,7 +206,13 @@ async def supervisor(
   }
 
   # Available tools: research delegation, completion signaling, knowledge extraction, and strategic thinking
-  lead_researcher_tools = [ConductResearch, ResearchComplete, ExtractKnowledge, RetrieveKnowledge, think_tool]
+  lead_researcher_tools = [
+    ConductResearch,
+    ResearchComplete,
+    ExtractKnowledge,
+    RetrieveKnowledge,
+    think_tool,
+  ]
 
   # Configure model with tools, retry logic, and model settings
   research_model = (
@@ -354,7 +360,6 @@ async def supervisor_tools(
           ),
         )
 
-
     except Exception as e:
       # Handle research execution errors
       if is_token_limit_exceeded(e, configurable.research_model) or True:
@@ -401,7 +406,11 @@ async def supervisor_tools(
           config,
         )
 
-        result_message = "Knowledge extracted and stored in knowledge graph successfully." if success else "Failed to extract knowledge to knowledge graph."
+        result_message = (
+          "Knowledge extracted and stored in knowledge graph successfully."
+          if success
+          else "Failed to extract knowledge to knowledge graph."
+        )
         await kg_integrator.close()
       else:
         result_message = "Knowledge graph storage is disabled - extraction skipped."

@@ -91,7 +91,8 @@ class Neo4jKnowledgeGraph:
     """Connect to Neo4j database."""
     try:
       self.driver = GraphDatabase.driver(
-        self.config.uri, auth=(self.config.username, self.config.password),
+        self.config.uri,
+        auth=(self.config.username, self.config.password),
       )
       # Test the connection
       with self.driver.session(database=self.config.database) as session:
@@ -298,7 +299,9 @@ class Neo4jKnowledgeGraph:
       return False
 
   async def link_claim_to_concepts(
-    self, claim_id: str, concept_names: List[str],
+    self,
+    claim_id: str,
+    concept_names: List[str],
   ) -> bool:
     """Create MENTIONS relationships between a claim and concepts."""
     if not self.driver:
@@ -316,7 +319,8 @@ class Neo4jKnowledgeGraph:
                 """
 
         result = session.run(
-          query, {"claim_id": claim_id, "concept_names": concept_names},
+          query,
+          {"claim_id": claim_id, "concept_names": concept_names},
         )
 
         record = result.single()
@@ -329,7 +333,10 @@ class Neo4jKnowledgeGraph:
       return False
 
   async def link_claims(
-    self, claim1_id: str, claim2_id: str, relationship_type: str = "SUPPORTS",
+    self,
+    claim1_id: str,
+    claim2_id: str,
+    relationship_type: str = "SUPPORTS",
   ) -> bool:
     """Create relationships between claims (SUPPORTS or CONTRADICTS)."""
     if not self.driver:
@@ -361,7 +368,9 @@ class Neo4jKnowledgeGraph:
       return False
 
   async def find_related_claims(
-    self, concept_names: List[str], limit: int = 10,
+    self,
+    concept_names: List[str],
+    limit: int = 10,
   ) -> List[Dict[str, Any]]:
     """Find claims that mention any of the given concepts."""
     if not self.driver:
@@ -476,5 +485,3 @@ async def create_knowledge_graph_client(
 def generate_id() -> str:
   """Generate a unique ID for nodes."""
   return str(uuid.uuid4())
-
-
