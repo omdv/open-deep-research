@@ -4,8 +4,8 @@ import uuid
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-
 from open_deep_research.deep_researcher import deep_researcher_builder
+
 from tests.evaluators import (
   eval_completeness,
   eval_correctness,

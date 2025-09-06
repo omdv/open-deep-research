@@ -21,11 +21,11 @@ from open_deep_research.tools.fmp.tools import (
   get_cash_flow,
   get_company_profile,
   get_economic_events,
-  get_stock_quote,
+  get_eod_quotes,
   get_income_statement,
   get_key_metrics,
-  get_eod_quotes,
   get_stock_news,
+  get_stock_quote,
   get_treasury_rates,
 )
 
@@ -50,6 +50,7 @@ async def simple_mcp_tool_call(tool_name: str, args: dict, mcp_url: str) -> str:
   Returns:
       Tool result as string
   """
+  good_status_codes = [200, 201]
   try:
     async with aiohttp.ClientSession() as session:
       # Map tool names to actual endpoints
@@ -62,9 +63,8 @@ async def simple_mcp_tool_call(tool_name: str, args: dict, mcp_url: str) -> str:
         # Use GET for FastAPI endpoints with query parameters
         params = args
         async with session.get(tool_url, params=params) as response:
-          if response.status == 200:
-            result = await response.text()
-            return result
+          if response.status in good_status_codes:
+            return await response.text()
           return f"Error calling tool {tool_name}: HTTP {response.status}"
       else:
         return f"Unknown tool: {tool_name}"
@@ -159,7 +159,7 @@ def get_model_token_limit(model_name: str) -> Optional[int]:
   return model_limits.get(clean_model)
 
 
-def is_token_limit_exceeded(error: Exception, model_name: str) -> bool:
+def is_token_limit_exceeded(error: Exception, _: str) -> bool:
   """Check if an error indicates token limit was exceeded."""
   error_str = str(error).lower()
   token_limit_indicators = [

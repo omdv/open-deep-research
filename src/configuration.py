@@ -32,6 +32,31 @@ class MCPConfig(BaseModel):
   """The tools to make available to the LLM"""
 
 
+class Neo4jConfig(BaseModel):
+  """Configuration for Neo4j knowledge graph storage."""
+
+  enabled: bool = Field(
+    default=False,
+    description="Whether to enable knowledge graph storage using Neo4j",
+  )
+  uri: str = Field(
+    default="bolt://localhost:7687",
+    description="Neo4j connection URI",
+  )
+  username: str = Field(
+    default="neo4j",
+    description="Neo4j username",
+  )
+  password: Optional[str] = Field(
+    default=None,
+    description="Neo4j password",
+  )
+  database: str = Field(
+    default="neo4j",
+    description="Neo4j database name",
+  )
+
+
 class Configuration(BaseModel):
   """Main configuration class for the Deep Research agent."""
 
@@ -234,6 +259,17 @@ class Configuration(BaseModel):
       },
     },
   )
+  # Neo4j knowledge graph configuration
+  neo4j_config: Optional[Neo4jConfig] = Field(
+    default_factory=Neo4jConfig,
+    optional=True,
+    metadata={
+      "x_oap_ui_config": {
+        "type": "object",
+        "description": "Neo4j knowledge graph storage configuration",
+      },
+    },
+  )
 
   @classmethod
   def from_runnable_config(
@@ -247,6 +283,19 @@ class Configuration(BaseModel):
       field_name: os.environ.get(field_name.upper(), configurable.get(field_name))
       for field_name in field_names
     }
+
+    # Handle nested Neo4j configuration from environment variables
+    neo4j_config = None
+    if any(key.startswith("NEO4J_") for key in os.environ):
+      neo4j_config = Neo4jConfig(
+        enabled=os.environ.get("NEO4J_ENABLED", "false").lower() == "true",
+        uri=os.environ.get("NEO4J_URI", "bolt://localhost:7687"),
+        username=os.environ.get("NEO4J_USERNAME", "neo4j"),
+        password=os.environ.get("NEO4J_PASSWORD"),
+        database=os.environ.get("NEO4J_DATABASE", "neo4j"),
+      )
+      values["neo4j_config"] = neo4j_config
+
     return cls(**{k: v for k, v in values.items() if v is not None})
 
   class Config:

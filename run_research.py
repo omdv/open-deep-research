@@ -24,7 +24,11 @@ async def main() -> None:
     # Convert enum to string value for serialization
     config_dict = config.model_dump()
     if "search_api" in config_dict:
-      config_dict["search_api"] = config_dict["search_api"].value if hasattr(config_dict["search_api"], 'value') else config_dict["search_api"]
+      config_dict["search_api"] = (
+        config_dict["search_api"].value
+        if hasattr(config_dict["search_api"], "value")
+        else config_dict["search_api"]
+      )
 
     result = await deep_researcher.ainvoke(
       {"messages": [{"role": "user", "content": query}]},
@@ -42,7 +46,7 @@ async def main() -> None:
     console.print(f"✅ Research completed! Report saved to: {filename}")
 
   except Exception as e:
-    console.print(f"❌ Error during research: {str(e)}")
+    console.print(f"❌ Error during research: {e!s}")
     sys.exit(1)
 
 

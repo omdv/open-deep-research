@@ -24,6 +24,28 @@ class ResearchComplete(BaseModel):
   """Call this tool to indicate that the research is complete."""
 
 
+class ExtractKnowledge(BaseModel):
+  """Call this tool to extract key concepts and claims from research for the knowledge graph."""
+
+  research_content: str = Field(
+    description="The research content to extract knowledge from (findings, insights, data)",
+  )
+  research_context: str = Field(
+    description="Context about what this research was investigating",
+  )
+
+
+class RetrieveKnowledge(BaseModel):
+  """Call this tool to retrieve existing knowledge from the knowledge graph that may inform current research."""
+
+  concepts: list[str] = Field(
+    description="List of concept names to search for in the knowledge graph (e.g. ['artificial intelligence', 'machine learning', 'neural networks'])",
+  )
+  limit: int = Field(
+    description="Maximum number of claims to retrieve", default=10,
+  )
+
+
 class Summary(BaseModel):
   """Research summary with key findings."""
 

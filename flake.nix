@@ -18,6 +18,8 @@
           packages = with pkgs; [
             uv
             nodejs_22
+            neo4j
+            go-task
           ];
 
           # Environment variables and commands to run when entering the shell.
